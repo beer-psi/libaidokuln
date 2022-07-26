@@ -5,7 +5,7 @@
 //! 
 //! ## Usage
 //! ```
-//! use libaidokuln::{write_text, write_image_data, fonts};
+//! use libaidokuln::{write_text, write_image_data, fonts, ImageOptions, Padding};
 //! 
 //! let mut data = write_text(
 //!     include_str!("./lorem.txt"),
@@ -42,6 +42,8 @@ mod tests;
 #[cfg(test)]
 mod bench;
 
+/// Module containing a few built-in fonts for text rendering.
+#[cfg_attr(not(test), cfg(feature = "fonts"))]
 pub mod fonts;
 use fonts::Font;
 
@@ -55,22 +57,45 @@ const BMP_HEADER2: [u8; 12] = [
 const BMP_HEADER3: [u8; 8] = [0x01, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00];
 const BMP_HEADER4: [u8; 8] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
 
-// horizontal, vertical
-#[derive(Debug)]
-pub struct Padding(pub f32, pub f32);
+/// Struct representing text padding, used to tell the library to add margins
+/// to the text.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Padding(
+    /// The horizontal padding.
+    pub f32, 
 
-#[derive(Debug)]
+    /// The vertical padding.
+    pub f32
+);
+
+/// Rendering options.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ImageOptions {
+    /// Text color. It is an usize, but can be written in an RGB-like format
+    /// using hex notation, e.g., `0x1F1E33`.
     pub text_color: usize,
+
+    /// Background color. Can be written in an RGB-like format simular to text
+    /// color.
     pub background_color: usize,
+
+    /// The margins for the generated page.
     pub padding: Padding,
+
+    /// Maximum page width.
     pub width: f32,
+    
+    /// Whether the renderer should force the given max width or not.
     pub constant_width: bool,
 }
 
-#[derive(Debug, PartialEq)]
+/// Struct representing split text.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Spliterated {
+    /// The split text.
     pub split: Vec<String>,
+
+    /// The maximum width of the split text.
     pub width: f32,
 }
 
@@ -92,6 +117,7 @@ fn calculate_text_length<T: AsRef<str>>(text: T, font: &Font) -> f32 {
     ret
 }
 
+/// Split the text into multiple lines based on a given maximum width and font.
 pub fn break_apart<T: AsRef<str>>(text: T, max_width: f32, font: &Font) -> Spliterated {
     let width = calculate_text_length(&text, font);
     if width <= max_width {
@@ -146,8 +172,7 @@ fn split_color(color: usize) -> Vec<u8> {
 
 /// Turns text into a 3-dimensional array containing the color data for each pixel
 pub fn write_text<T: AsRef<str>>(text: T, font: Font, options: ImageOptions) -> Vec<Vec<Vec<u8>>> {
-    let text = text.as_ref();
-    // let text = text.as_ref().replace(|c| matches!(c, '\0'..='\x7F'), "");
+    let text = text.as_ref().replace(|c| matches!(c, '\0'..='\x7F'), "");
     let spliterated = break_apart(text, options.width - options.padding.0 * 2.0, &font);
     let split = spliterated.split;
     let width = if options.constant_width {
@@ -219,6 +244,7 @@ fn little_endian(size: usize, data: usize) -> Vec<u8> {
     ret
 }
 
+/// Turns an array of pixels into a bitmap image.
 pub fn write_image_data(data: &mut Vec<Vec<Vec<u8>>>) -> Vec<u8> {
     let mut imgdata: Vec<u8> = Vec::new();
     let width = data[0].len();
