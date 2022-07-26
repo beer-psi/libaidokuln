@@ -9,7 +9,7 @@ mod tests;
 #[cfg(test)]
 mod bench;
 
-mod fonts;
+pub mod fonts;
 use fonts::Font;
 
 extern crate alloc;
