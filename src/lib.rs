@@ -1,12 +1,12 @@
 //! # libaidokuln
-//! 
+//!
 //! A WASM/no_std library for generating bitmap images from text. As the name implies, it
 //! is geared toward usage in [Aidoku](https://aidoku.app), but can be used anywhere.
-//! 
+//!
 //! ## Usage
 //! ```
 //! use libaidokuln::{write_text, write_image_data, fonts, ImageOptions, Padding};
-//! 
+//!
 //! let mut data = write_text(
 //!     "Hello World",
 //!     fonts::times::TIMES36,
@@ -18,10 +18,10 @@
 //!         constant_width: false,
 //!     },
 //! );
-//! 
+//!
 //! let img = write_image_data(&mut data);
 //! ```
-//! 
+//!
 //! ## Caveats
 //! * Does not support Unicode characters. Any characters between ASCII 32 and 126 will
 //! be converted, and the rest will be spaces.
@@ -29,7 +29,7 @@
 //! binary data.
 //! * Fonts follow a specific format. To generate a font, check the FontToJson.java file
 //! in the `fonts` module.
-//! 
+//!
 //! ## Credits
 //! * [JimIsWayTooEpic](https://github.com/phiefferj24) for creating the original TypeScript
 //! library which this is based on.
@@ -62,10 +62,9 @@ const BMP_HEADER4: [u8; 8] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Padding(
     /// The horizontal padding.
-    pub f32, 
-
+    pub f32,
     /// The vertical padding.
-    pub f32
+    pub f32,
 );
 
 /// Rendering options.
@@ -84,7 +83,7 @@ pub struct ImageOptions {
 
     /// Maximum page width.
     pub width: f32,
-    
+
     /// Whether the renderer should force the given max width or not.
     pub constant_width: bool,
 }
@@ -162,17 +161,21 @@ pub fn break_apart<T: AsRef<str>>(text: T, max_width: f32, font: &Font) -> Split
     }
 }
 
-fn split_color(color: usize) -> Vec<u8> {
-    vec![
+fn split_color(color: usize) -> (u8, u8, u8) {
+    (
         (color & 0xFF) as u8,
         ((color & 0xFF00) >> 8) as u8,
         ((color & 0xFF0000) >> 16) as u8,
-    ]
+    )
 }
 
 /// Turns text into a 3-dimensional array containing the color data for each pixel
-pub fn write_text<T: AsRef<str>>(text: T, font: Font, options: ImageOptions) -> Vec<Vec<Vec<u8>>> {
-    let text = text.as_ref().replace(|c| matches!(c, '\0'..='\x7F'), "");
+pub fn write_text<T: AsRef<str>>(
+    text: T,
+    font: Font,
+    options: ImageOptions,
+) -> Vec<Vec<(u8, u8, u8)>> {
+    let text = text.as_ref();
     let spliterated = break_apart(text, options.width - options.padding.0 * 2.0, &font);
     let split = spliterated.split;
     let width = if options.constant_width {
@@ -224,11 +227,11 @@ pub fn write_text<T: AsRef<str>>(text: T, font: Font, options: ImageOptions) -> 
 
             if alpha != 0 {
                 let colors = split_color(options.text_color);
-                img[i][j] = vec![
-                    core::cmp::min(255, colors[0] * alpha / 255 + colors[0] * (1 - alpha / 255)),
-                    core::cmp::min(255, colors[1] * alpha / 255 + colors[1] * (1 - alpha / 255)),
-                    core::cmp::min(255, colors[2] * alpha / 255 + colors[2] * (1 - alpha / 255)),
-                ];
+                img[i][j] = (
+                    core::cmp::min(255, colors.0 * alpha / 255 + colors.0 * (1 - alpha / 255)),
+                    core::cmp::min(255, colors.1 * alpha / 255 + colors.1 * (1 - alpha / 255)),
+                    core::cmp::min(255, colors.2 * alpha / 255 + colors.2 * (1 - alpha / 255)),
+                );
             }
         }
     }
@@ -245,7 +248,7 @@ fn little_endian(size: usize, data: usize) -> Vec<u8> {
 }
 
 /// Turns an array of pixels into a bitmap image.
-pub fn write_image_data(data: &mut Vec<Vec<Vec<u8>>>) -> Vec<u8> {
+pub fn write_image_data(data: &mut Vec<Vec<(u8, u8, u8)>>) -> Vec<u8> {
     let mut imgdata: Vec<u8> = Vec::new();
     let width = data[0].len();
     let bytewidth = (((width as f32) * 3.0 / 4.0) + 0.5) as usize * 4;
@@ -254,7 +257,9 @@ pub fn write_image_data(data: &mut Vec<Vec<Vec<u8>>>) -> Vec<u8> {
     let file_size = size + 54;
     for i in (0..height).rev() {
         for j in 0..width {
-            imgdata.append(&mut data[i][j]);
+            imgdata.push(data[i][j].0);
+            imgdata.push(data[i][j].1);
+            imgdata.push(data[i][j].2);
         }
         imgdata.append(&mut vec![0; bytewidth - width * 3]);
     }
