@@ -1,5 +1,38 @@
-// https://github.com/pandeynmn/nmns-extensions/blob/novel-branch/src/LNInterceptor.ts
-// Originally made by Jim, ported by beerpsi
+//! # libaidokuln
+//! 
+//! A WASM/no_std library for generating bitmap images from text. As the name implies, it
+//! is geared toward usage in [Aidoku](https://aidoku.app), but can be used anywhere.
+//! 
+//! ## Usage
+//! ```
+//! use libaidokuln::{write_text, write_image_data, fonts};
+//! 
+//! let mut data = write_text(
+//!     include_str!("./lorem.txt"),
+//!     fonts::times::TIMES36,
+//!     ImageOptions {
+//!         text_color: 0,
+//!         background_color: 0xFFFFFF,
+//!         padding: Padding(40.0, 40.0),
+//!         width: 1080.0,
+//!         constant_width: false,
+//!     },
+//! );
+//! 
+//! let img = write_image_data(&mut data);
+//! ```
+//! 
+//! ## Caveats
+//! * Does not support Unicode characters. Any characters between ASCII 32 and 126 will
+//! be converted, and the rest will be spaces.
+//! * Fonts need to be bundled with the final binary, and it can accumulate a lot of
+//! binary data.
+//! * Fonts follow a specific format. To generate a font, check the FontToJson.java file
+//! in the `fonts` module.
+//! 
+//! ## Credits
+//! * [JimIsWayTooEpic](https://github.com/phiefferj24) for creating the original TypeScript
+//! library which this is based on.
 #![no_std]
 #![feature(test)]
 #![allow(clippy::needless_range_loop)]
