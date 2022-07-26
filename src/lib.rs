@@ -8,7 +8,7 @@
 //! use libaidokuln::{write_text, write_image_data, fonts, ImageOptions, Padding};
 //! 
 //! let mut data = write_text(
-//!     include_str!("./lorem.txt"),
+//!     "Hello World",
 //!     fonts::times::TIMES36,
 //!     ImageOptions {
 //!         text_color: 0,

@@ -17,6 +17,8 @@ jobs:
         with:
           command: doc
           args: --no-deps
+      -
+        run: touch target/doc/.nojekyll
       - name: Uploading build artifact
         uses: actions/upload-artifact@v3
         with:
