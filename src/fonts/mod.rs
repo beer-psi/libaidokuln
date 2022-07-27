@@ -9,11 +9,9 @@ pub struct Font {
     pub font: [&'static [u8]; 95],
 }
 
-impl<T> From<T> for Font
-where
-    T: AsRef<str>,
-{
-    fn from(name: T) -> Self {
+impl Font {
+    /// Get a font from its name.
+    pub fn from_name<T: AsRef<str>>(name: T) -> Self {
         match name.as_ref() {
             "arial18" => arial::ARIAL18,
             "arial24" => arial::ARIAL24,
