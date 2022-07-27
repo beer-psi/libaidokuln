@@ -67,6 +67,9 @@ pub struct Padding(
     pub f32,
 );
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BitmapPixel(pub u8, pub u8, pub u8);
+
 /// Rendering options.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ImageOptions {
@@ -161,8 +164,8 @@ pub fn break_apart<T: AsRef<str>>(text: T, max_width: f32, font: &Font) -> Split
     }
 }
 
-fn split_color(color: usize) -> (u8, u8, u8) {
-    (
+fn split_color(color: usize) -> BitmapPixel {
+    BitmapPixel(
         (color & 0xFF) as u8,
         ((color & 0xFF00) >> 8) as u8,
         ((color & 0xFF0000) >> 16) as u8,
@@ -174,7 +177,7 @@ pub fn write_text<T: AsRef<str>>(
     text: T,
     font: Font,
     options: ImageOptions,
-) -> Vec<Vec<(u8, u8, u8)>> {
+) -> Vec<Vec<BitmapPixel>> {
     let text = text.as_ref();
     let spliterated = break_apart(text, options.width - options.padding.0 * 2.0, &font);
     let split = spliterated.split;
@@ -227,7 +230,7 @@ pub fn write_text<T: AsRef<str>>(
 
             if alpha != 0 {
                 let colors = split_color(options.text_color);
-                img[i][j] = (
+                img[i][j] = BitmapPixel(
                     core::cmp::min(255, colors.0 * alpha / 255 + colors.0 * (1 - alpha / 255)),
                     core::cmp::min(255, colors.1 * alpha / 255 + colors.1 * (1 - alpha / 255)),
                     core::cmp::min(255, colors.2 * alpha / 255 + colors.2 * (1 - alpha / 255)),
@@ -248,7 +251,7 @@ fn little_endian(size: usize, data: usize) -> Vec<u8> {
 }
 
 /// Turns an array of pixels into a bitmap image.
-pub fn write_image_data(data: &mut Vec<Vec<(u8, u8, u8)>>) -> Vec<u8> {
+pub fn write_image_data(data: &mut Vec<Vec<BitmapPixel>>) -> Vec<u8> {
     let mut imgdata: Vec<u8> = Vec::new();
     let width = data[0].len();
     let bytewidth = (((width as f32) * 3.0 / 4.0) + 0.5) as usize * 4;
