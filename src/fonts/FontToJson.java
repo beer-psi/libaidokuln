@@ -5,11 +5,12 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.awt.font.*;
-import java.awt.geom.*;
-import java.awt.image.*;
-import java.io.*;
-import java.util.*;
+import java.awt.font.FontRenderContext;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
 
 public class FontToJson {
 
@@ -45,7 +46,7 @@ public class FontToJson {
         int[] data = new int[img.getHeight()*img.getWidth()];
         for(int i = 0; i < img.getHeight(); i++) {
             for(int j = 0; j < img.getWidth(); j++) {
-                data[i*img.getWidth()+j] = ((img.getRGB(j, i)&0xff000000)>>24)&0xff;
+                data[i * img.getWidth() + j] = ((img.getRGB(j, i) & 0xff000000) >> 24) & 0xff;
             }
         }
         return data;
