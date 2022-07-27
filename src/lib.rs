@@ -62,11 +62,11 @@ pub struct BitmapPixel(pub u8, pub u8, pub u8);
 /// Rendering options.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ImageOptions {
-    /// Text color. It is an usize, but can be written in an RGB-like format
+    /// Text color. It is an usize, but can be written in an BGR-like format
     /// using hex notation, e.g., `0x1F1E33`.
     pub text_color: usize,
 
-    /// Background color. Can be written in an RGB-like format simular to text
+    /// Background color. Can be written in an BGR-like format simular to text
     /// color.
     pub background_color: usize,
 
@@ -178,7 +178,7 @@ fn split_color(color: usize) -> BitmapPixel {
 }
 
 /// Turns text into a 3-dimensional array containing the color data for each pixel
-/// 
+///
 /// Set the page parameter to 0 to generate an image containing all text.
 pub fn write_text<T: AsRef<str>>(
     text: T,
@@ -190,9 +190,9 @@ pub fn write_text<T: AsRef<str>>(
 
     let spliterated = break_apart(text, options.width - options.padding.0 * 2.0, &font);
     let split = if page >= 1 {
-        spliterated.split[
-            (page - 1) * options.lines..core::cmp::min(spliterated.split.len(), page * options.lines)
-        ].to_vec()
+        spliterated.split[(page - 1) * options.lines
+            ..core::cmp::min(spliterated.split.len(), page * options.lines)]
+            .to_vec()
     } else {
         spliterated.split
     };
@@ -236,18 +236,32 @@ pub fn write_text<T: AsRef<str>>(
                 letter = font.font[char as usize];
             }
 
-            let alpha = letter[
-                (((i as f32 - options.padding.1) - ((line_at - 1) as f32) * font.height)
+            let alpha = letter[(((i as f32 - options.padding.1)
+                - ((line_at - 1) as f32) * font.height)
                 * ((letter.len() as f32) / font.height)
-                + (j as f32 - letter_base)) as usize
-            ];
+                + (j as f32 - letter_base)) as usize];
 
             if alpha != 0 {
                 let colors = split_color(options.text_color);
                 img[i * ceil_width + j] = BitmapPixel(
-                    core::cmp::min(255, colors.0 * alpha / 255 + colors.0 * (1 - alpha / 255)),
-                    core::cmp::min(255, colors.1 * alpha / 255 + colors.1 * (1 - alpha / 255)),
-                    core::cmp::min(255, colors.2 * alpha / 255 + colors.2 * (1 - alpha / 255)),
+                    core::cmp::min(
+                        255,
+                        ((colors.0 as f32) * (alpha as f32) / 255.0
+                            + (colors.0 as f32) * (1.0 - alpha as f32 / 255.0))
+                            as u8,
+                    ),
+                    core::cmp::min(
+                        255,
+                        ((colors.1 as f32) * (alpha as f32) / 255.0
+                            + (colors.1 as f32) * (1.0 - alpha as f32 / 255.0))
+                            as u8,
+                    ),
+                    core::cmp::min(
+                        255,
+                        ((colors.2 as f32) * (alpha as f32) / 255.0
+                            + (colors.2 as f32) * (1.0 - alpha as f32 / 255.0))
+                            as u8,
+                    ),
                 );
             }
         }
@@ -276,7 +290,7 @@ pub fn write_text<T: AsRef<str>>(
             ret.push(img[idx].1);
             ret.push(img[idx].2);
         }
-        ret.append(&mut vec![0; bytewidth - ceil_width * 3]); 
+        ret.append(&mut vec![0; bytewidth - ceil_width * 3]);
     }
     ret
 }

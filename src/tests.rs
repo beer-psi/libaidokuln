@@ -40,7 +40,10 @@ fn pagination() {
         include_str!("./lorem.txt"),
         1,
         fonts::palatino::PALATINO18,
-        ImageOptions::default(),
+        ImageOptions {
+            text_color: 0xFF0000,
+            ..Default::default()
+        },
     );
     let mut file = File::create("test2.bmp").unwrap();
     file.write_all(&img).unwrap();

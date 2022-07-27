@@ -7,7 +7,7 @@ fn lorem_ipsum_5_paragraphs(bench: &mut test::Bencher) {
         write_text(
             include_str!("./lorem.txt"),
             0,
-            fonts::times::TIMES36,        
+            fonts::times::TIMES36,
             ImageOptions::default(),
         )
     })
