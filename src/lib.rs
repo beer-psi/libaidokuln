@@ -5,9 +5,10 @@
 //!
 //! ## Usage
 //! ```
-//! use libaidokuln::{write_text, write_image_data, fonts, ImageOptions, Padding};
+//! use libaidokuln::{write_text, fonts, ImageOptions, Padding};
 //!
-//! let mut data = write_text(
+//! // Write this image anywhere you want
+//! let img = write_text(
 //!     "Hello World",
 //!     fonts::times::TIMES36,
 //!     ImageOptions {
@@ -19,7 +20,6 @@
 //!     },
 //! );
 //!
-//! let img = write_image_data(&mut data);
 //! ```
 //!
 //! ## Caveats
@@ -44,11 +44,12 @@ mod bench;
 
 /// Module containing a few built-in fonts for text rendering.
 #[cfg_attr(not(test), cfg(feature = "fonts"))]
+#[allow(clippy::all, unknown_lints)]
 pub mod fonts;
 use fonts::Font;
 
 extern crate alloc;
-use alloc::{borrow::ToOwned, string::String, vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 const BMP_HEADER1: [u8; 2] = [0x42, 0x4D];
 const BMP_HEADER2: [u8; 12] = [
@@ -177,23 +178,26 @@ pub fn write_text<T: AsRef<str>>(
     text: T,
     font: Font,
     options: ImageOptions,
-) -> Vec<Vec<BitmapPixel>> {
+) -> Vec<u8> {
     let text = text.as_ref();
+
     let spliterated = break_apart(text, options.width - options.padding.0 * 2.0, &font);
     let split = spliterated.split;
+
     let width = if options.constant_width {
         options.width
     } else {
         spliterated.width + 2.0 * options.padding.0
     };
     let height = (split.len() as f32) * font.height + options.padding.1 * 2.0;
+    let ceil_width = ceil(width) as usize;
+    let ceil_height = ceil(height) as usize;
 
-    let bg = split_color(options.background_color);
-    let mut img = vec![vec![bg; ceil(width) as usize]; ceil(height) as usize];
+    let mut img = vec![split_color(options.background_color); ceil_width * ceil_height];
     let mut line_at: usize = 0;
 
-    for i in 0..(ceil(height) as usize) {
-        if (i as f32) < options.padding.1 || (i as f32) >= height - options.padding.1 {
+    for i in (options.padding.1 as usize)..((height - options.padding.1) as usize) {
+        if (i as f32) < options.padding.1 {
             continue;
         }
 
@@ -201,15 +205,11 @@ pub fn write_text<T: AsRef<str>>(
             line_at += 1;
         }
 
+        let mut letter: &[u8] = &[];
         let mut letter_on: usize = 0;
-        let mut letter = Vec::new();
         let mut letter_base = options.padding.0;
         let bytes = split[line_at - 1].as_bytes();
-        for j in 0..(ceil(width) as usize) {
-            if (j as f32) < options.padding.0 || (j as f32) >= width - options.padding.0 {
-                continue;
-            }
-
+        for j in (ceil(options.padding.0) as usize)..((width - options.padding.0) as usize) {
             if (j as f32) >= letter_base + (letter.len() as f32) / font.height {
                 letter_on += 1;
                 if letter_on > bytes.len() {
@@ -220,17 +220,18 @@ pub fn write_text<T: AsRef<str>>(
                 if char >= 95 {
                     char = 0;
                 }
-                letter = font.font[char as usize].to_owned();
+                letter = font.font[char as usize];
             }
 
-            let thing = ((i as f32 - options.padding.1) - ((line_at - 1) as f32) * font.height)
+            let alpha = letter[
+                (((i as f32 - options.padding.1) - ((line_at - 1) as f32) * font.height)
                 * ((letter.len() as f32) / font.height)
-                + (j as f32 - letter_base);
-            let alpha = letter[thing as usize];
+                + (j as f32 - letter_base)) as usize
+            ];
 
             if alpha != 0 {
                 let colors = split_color(options.text_color);
-                img[i][j] = BitmapPixel(
+                img[i * ceil_width + j] = BitmapPixel(
                     core::cmp::min(255, colors.0 * alpha / 255 + colors.0 * (1 - alpha / 255)),
                     core::cmp::min(255, colors.1 * alpha / 255 + colors.1 * (1 - alpha / 255)),
                     core::cmp::min(255, colors.2 * alpha / 255 + colors.2 * (1 - alpha / 255)),
@@ -239,7 +240,32 @@ pub fn write_text<T: AsRef<str>>(
         }
     }
 
-    img
+    let bytewidth = (((ceil_width as f32) * 3.0 / 4.0) + 0.5) as usize * 4;
+    let size = bytewidth * ceil_height;
+    let file_size = size + 54;
+    let mut imgdata: Vec<u8> = Vec::with_capacity(size);
+    for i in (0..ceil_height).rev() {
+        for j in 0..ceil_width {
+            let idx = i * ceil_width + j;
+            imgdata.push(img[idx].0);
+            imgdata.push(img[idx].1);
+            imgdata.push(img[idx].2);
+        }
+        imgdata.append(&mut vec![0; bytewidth - ceil_width * 3]); 
+    }
+
+    let mut ret = Vec::with_capacity(file_size);
+    ret.extend(BMP_HEADER1);
+    ret.append(&mut little_endian(4, file_size));
+    ret.extend(BMP_HEADER2);
+    ret.append(&mut little_endian(4, ceil_width));
+    ret.append(&mut little_endian(4, ceil_height));
+    ret.extend(BMP_HEADER3);
+    ret.append(&mut little_endian(4, size));
+    ret.extend([0x13, 0x0b, 0x00, 0x00, 0x13, 0x0b, 0x00, 0x00]);
+    ret.extend(BMP_HEADER4);
+    ret.append(&mut imgdata);
+    ret
 }
 
 fn little_endian(size: usize, data: usize) -> Vec<u8> {
@@ -247,35 +273,5 @@ fn little_endian(size: usize, data: usize) -> Vec<u8> {
     for i in 0..size {
         ret.push((data >> (8 * i) & 0x000000ff) as u8);
     }
-    ret
-}
-
-/// Turns an array of pixels into a bitmap image.
-pub fn write_image_data(data: &mut Vec<Vec<BitmapPixel>>) -> Vec<u8> {
-    let mut imgdata: Vec<u8> = Vec::new();
-    let width = data[0].len();
-    let bytewidth = (((width as f32) * 3.0 / 4.0) + 0.5) as usize * 4;
-    let height = data.len();
-    let size = bytewidth * height;
-    let file_size = size + 54;
-    for i in (0..height).rev() {
-        for j in 0..width {
-            imgdata.push(data[i][j].0);
-            imgdata.push(data[i][j].1);
-            imgdata.push(data[i][j].2);
-        }
-        imgdata.append(&mut vec![0; bytewidth - width * 3]);
-    }
-    let mut ret = Vec::with_capacity(file_size);
-    ret.append(&mut BMP_HEADER1.to_vec());
-    ret.append(&mut little_endian(4, file_size));
-    ret.append(&mut BMP_HEADER2.to_vec());
-    ret.append(&mut little_endian(4, width));
-    ret.append(&mut little_endian(4, height));
-    ret.append(&mut BMP_HEADER3.to_vec());
-    ret.append(&mut little_endian(4, size));
-    ret.append(&mut vec![0x13, 0x0b, 0x00, 0x00, 0x13, 0x0b, 0x00, 0x00]);
-    ret.append(&mut BMP_HEADER4.to_vec());
-    ret.append(&mut imgdata);
     ret
 }

@@ -24,9 +24,9 @@ fn spliterate() {
 
 #[test]
 fn it_works() {
-    let mut data = write_text(
+    let img = write_text(
         include_str!("./lorem.txt"),
-        fonts::times::TIMES36,
+        fonts::palatino::PALATINO36,
         ImageOptions {
             text_color: 0,
             background_color: 0xFFFFFF,
@@ -35,7 +35,6 @@ fn it_works() {
             constant_width: false,
         },
     );
-    let img = write_image_data(&mut data);
     let mut file = File::create("test.bmp").unwrap();
     file.write_all(&img).unwrap();
 }

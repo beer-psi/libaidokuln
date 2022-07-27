@@ -4,7 +4,7 @@ use super::*;
 #[bench]
 fn lorem_ipsum_5_paragraphs(bench: &mut test::Bencher) {
     bench.iter(|| {
-        let mut data = write_text(
+        write_text(
             include_str!("./lorem.txt"),
             fonts::times::TIMES36,
             ImageOptions {
@@ -14,7 +14,6 @@ fn lorem_ipsum_5_paragraphs(bench: &mut test::Bencher) {
                 width: 1080.0,
                 constant_width: false,
             },
-        );
-        write_image_data(&mut data)
+        )
     })
 }
