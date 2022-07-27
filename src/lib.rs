@@ -10,14 +10,9 @@
 //! // Write this image anywhere you want
 //! let img = write_text(
 //!     "Hello World",
+//!     0,
 //!     fonts::times::TIMES36,
-//!     ImageOptions {
-//!         text_color: 0,
-//!         background_color: 0xFFFFFF,
-//!         padding: Padding(40.0, 40.0),
-//!         width: 1080.0,
-//!         constant_width: false,
-//!     },
+//!     ImageOptions::default(),
 //! );
 //!
 //! ```
@@ -51,13 +46,6 @@ use fonts::Font;
 extern crate alloc;
 use alloc::{string::String, vec, vec::Vec};
 
-const BMP_HEADER1: [u8; 2] = [0x42, 0x4D];
-const BMP_HEADER2: [u8; 12] = [
-    0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00,
-];
-const BMP_HEADER3: [u8; 8] = [0x01, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00];
-const BMP_HEADER4: [u8; 8] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-
 /// Struct representing text padding, used to tell the library to add margins
 /// to the text.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -90,6 +78,22 @@ pub struct ImageOptions {
 
     /// Whether the renderer should force the given max width or not.
     pub constant_width: bool,
+
+    /// The number of lines in a given page.
+    pub lines: usize,
+}
+
+impl Default for ImageOptions {
+    fn default() -> Self {
+        Self {
+            text_color: 0,
+            background_color: 0xFFFFFF,
+            padding: Padding(20.0, 20.0),
+            width: 800.0,
+            constant_width: true,
+            lines: 60,
+        }
+    }
 }
 
 /// Struct representing split text.
@@ -174,15 +178,24 @@ fn split_color(color: usize) -> BitmapPixel {
 }
 
 /// Turns text into a 3-dimensional array containing the color data for each pixel
+/// 
+/// Set the page parameter to 0 to generate an image containing all text.
 pub fn write_text<T: AsRef<str>>(
     text: T,
+    page: usize,
     font: Font,
     options: ImageOptions,
 ) -> Vec<u8> {
     let text = text.as_ref();
 
     let spliterated = break_apart(text, options.width - options.padding.0 * 2.0, &font);
-    let split = spliterated.split;
+    let split = if page >= 1 {
+        spliterated.split[
+            (page - 1) * options.lines..core::cmp::min(spliterated.split.len(), page * options.lines)
+        ].to_vec()
+    } else {
+        spliterated.split
+    };
 
     let width = if options.constant_width {
         options.width
@@ -243,28 +256,28 @@ pub fn write_text<T: AsRef<str>>(
     let bytewidth = (((ceil_width as f32) * 3.0 / 4.0) + 0.5) as usize * 4;
     let size = bytewidth * ceil_height;
     let file_size = size + 54;
-    let mut imgdata: Vec<u8> = Vec::with_capacity(size);
+
+    let mut ret = Vec::with_capacity(file_size);
+    ret.extend([0x42, 0x4D]); // bmp header 1
+    ret.append(&mut little_endian(4, file_size));
+    ret.extend([
+        0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00,
+    ]); // bmp header 2
+    ret.append(&mut little_endian(4, ceil_width));
+    ret.append(&mut little_endian(4, ceil_height));
+    ret.extend([0x01, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00]); // bmp header 3
+    ret.append(&mut little_endian(4, size));
+    ret.extend([0x13, 0x0b, 0x00, 0x00, 0x13, 0x0b, 0x00, 0x00]);
+    ret.extend([0x00; 8]); // bmp header 4
     for i in (0..ceil_height).rev() {
         for j in 0..ceil_width {
             let idx = i * ceil_width + j;
-            imgdata.push(img[idx].0);
-            imgdata.push(img[idx].1);
-            imgdata.push(img[idx].2);
+            ret.push(img[idx].0);
+            ret.push(img[idx].1);
+            ret.push(img[idx].2);
         }
-        imgdata.append(&mut vec![0; bytewidth - ceil_width * 3]); 
+        ret.append(&mut vec![0; bytewidth - ceil_width * 3]); 
     }
-
-    let mut ret = Vec::with_capacity(file_size);
-    ret.extend(BMP_HEADER1);
-    ret.append(&mut little_endian(4, file_size));
-    ret.extend(BMP_HEADER2);
-    ret.append(&mut little_endian(4, ceil_width));
-    ret.append(&mut little_endian(4, ceil_height));
-    ret.extend(BMP_HEADER3);
-    ret.append(&mut little_endian(4, size));
-    ret.extend([0x13, 0x0b, 0x00, 0x00, 0x13, 0x0b, 0x00, 0x00]);
-    ret.extend(BMP_HEADER4);
-    ret.append(&mut imgdata);
     ret
 }
 

@@ -26,15 +26,22 @@ fn spliterate() {
 fn it_works() {
     let img = write_text(
         include_str!("./lorem.txt"),
-        fonts::palatino::PALATINO36,
-        ImageOptions {
-            text_color: 0,
-            background_color: 0xFFFFFF,
-            padding: Padding(40.0, 40.0),
-            width: 1080.0,
-            constant_width: false,
-        },
+        0,
+        fonts::palatino::PALATINO18,
+        ImageOptions::default(),
     );
     let mut file = File::create("test.bmp").unwrap();
+    file.write_all(&img).unwrap();
+}
+
+#[test]
+fn pagination() {
+    let img = write_text(
+        include_str!("./lorem.txt"),
+        1,
+        fonts::palatino::PALATINO18,
+        ImageOptions::default(),
+    );
+    let mut file = File::create("test2.bmp").unwrap();
     file.write_all(&img).unwrap();
 }
