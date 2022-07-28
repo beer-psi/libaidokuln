@@ -27,7 +27,7 @@ fn it_works() {
     let img = write_text(
         include_str!("./lorem.txt"),
         0,
-        fonts::palatino::PALATINO18,
+        fonts::fs_brabo::FS_BRABO36,
         ImageOptions::default(),
     );
     let mut file = File::create("test.bmp").unwrap();
@@ -39,7 +39,7 @@ fn pagination() {
     let img = write_text(
         include_str!("./lorem.txt"),
         1,
-        fonts::palatino::PALATINO18,
+        fonts::atkinson::ATKINSON18,
         ImageOptions {
             text_color: 0xFF0000,
             ..Default::default()

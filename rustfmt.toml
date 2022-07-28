@@ -1,1 +1,1 @@
-ignore = ["src/fonts"]
+ignore = ["src/fonts/data"]

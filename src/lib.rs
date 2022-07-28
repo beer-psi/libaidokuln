@@ -38,8 +38,6 @@ mod tests;
 mod bench;
 
 /// Module containing a few built-in fonts for text rendering.
-#[cfg_attr(not(test), cfg(feature = "fonts"))]
-#[allow(clippy::all, unknown_lints)]
 pub mod fonts;
 use fonts::Font;
 
