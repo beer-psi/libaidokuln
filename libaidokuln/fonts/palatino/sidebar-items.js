@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["PALATINO18",""],["PALATINO24",""],["PALATINO30",""],["PALATINO36",""]]};
