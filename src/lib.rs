@@ -108,9 +108,7 @@ fn ceil(num: f32) -> f32 {
     (num as i32 + 1) as f32
 }
 
-fn calculate_text_length<T: AsRef<str>, S: AsRef<Font>>(text: T, font: S) -> f32 {
-    let font = font.as_ref();
-
+fn calculate_text_length<T: AsRef<str>>(text: T, font: &Font) -> f32 {
     let mut ret = 0.0;
     for c in text.as_ref().as_bytes() {
         let curr = *c;
@@ -125,9 +123,7 @@ fn calculate_text_length<T: AsRef<str>, S: AsRef<Font>>(text: T, font: S) -> f32
 }
 
 /// Split the text into multiple lines based on a given maximum width and font.
-pub fn break_apart<T: AsRef<str>, S: AsRef<Font>>(text: T, max_width: f32, font: S) -> Spliterated {
-    let font = font.as_ref();
-
+pub fn break_apart<T: AsRef<str>>(text: T, max_width: f32, font: &Font) -> Spliterated {
     let width = calculate_text_length(&text, font);
     if width <= max_width {
         return Spliterated {
@@ -185,16 +181,15 @@ fn split_color(color: usize) -> BitmapPixel {
 /// 
 /// This assumes that the given text is ASCII. Anything not ASCII will be filtered out.
 /// You may want to preserve them by using a crate like [deunicode](https://lib.rs/crates/deunicode).
-pub fn write_text<T: AsRef<str>, S: AsRef<Font>>(
+pub fn write_text<T: AsRef<str>>(
     text: T,
     page: usize,
-    font: S,
+    font: Font,
     options: ImageOptions,
 ) -> Vec<u8> {
     let text = text.as_ref().chars().filter(|&c| (c as u8) < 0x7F).collect::<String>();
-    let font = font.as_ref();
 
-    let spliterated = break_apart(text, options.width - options.padding.0 * 2.0, font);
+    let spliterated = break_apart(text, options.width - options.padding.0 * 2.0, &font);
     let split = if page >= 1 {
         spliterated.split[(page - 1) * options.lines
             ..core::cmp::min(spliterated.split.len(), page * options.lines)]
