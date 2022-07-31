@@ -18,6 +18,12 @@ pub struct Font {
     pub font: [&'static [u8]; 95],
 }
 
+impl AsRef<Font> for Font {
+    fn as_ref(&self) -> &Font {
+        self
+    }
+}
+
 impl Font {
     /// Get a font from its name.
     #[cfg_attr(not(test), cfg(feature = "fonts"))]
