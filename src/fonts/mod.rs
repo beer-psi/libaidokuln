@@ -13,6 +13,7 @@ mod data {
 #[cfg_attr(not(test), cfg(feature = "fonts"))]
 pub use data::*;
 
+#[derive(Debug, Clone, Copy)]
 pub struct Font {
     pub height: f32,
     pub font: [&'static [u8]; 95],
