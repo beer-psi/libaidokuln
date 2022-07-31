@@ -178,13 +178,16 @@ fn split_color(color: usize) -> BitmapPixel {
 /// Turns text into a 3-dimensional array containing the color data for each pixel
 ///
 /// Set the page parameter to 0 to generate an image containing all text.
+/// 
+/// This assumes that the given text is ASCII. Anything not ASCII will be filtered out.
+/// You may want to preserve them by using a crate like [deunicode](https://lib.rs/crates/deunicode).
 pub fn write_text<T: AsRef<str>>(
     text: T,
     page: usize,
     font: Font,
     options: ImageOptions,
 ) -> Vec<u8> {
-    let text = text.as_ref();
+    let text = text.as_ref().chars().filter(|&c| (c as u8) < 0x7F).collect::<String>();
 
     let spliterated = break_apart(text, options.width - options.padding.0 * 2.0, &font);
     let split = if page >= 1 {
